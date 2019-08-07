@@ -54,8 +54,8 @@ export const getReachableCount = id => {
 export const getReachableModuleCount = () => reachableMap.size;
 
 export const getReachableSize = () =>
-  Array.from(reachableMap).reduce((a, id) => {
-    const node = graph && graph.nodes.get(id);
+  Array.from(reachableMap).reduce((a, [id, count]) => {
+    const node = count > 0 && graph && graph.nodes.get(id);
     const size = (node && node.size) || 0;
     return a + size;
   }, 0);
