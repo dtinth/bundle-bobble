@@ -1,12 +1,13 @@
-import React from "react";
+import React, { useEffect } from "react";
 import ReactDOM from "react-dom";
-import { useObserver } from "mobx-react-lite";
+import { useObserver, Observer } from "mobx-react-lite";
 import "./styles.css";
 import { db } from "./db";
 import { log, logElementRef } from "./logging";
 import { data, loadData } from "./data";
 import { ErrorBoundary } from "react-error-boundary";
 import { Link, Router } from "@reach/router";
+import { isCut, toggleCut, setGraph } from "./reachability";
 
 function App() {
   const form = React.useRef();
@@ -17,7 +18,7 @@ function App() {
     else log("Data has already been loaded");
   }, []);
   return (
-    <div className="container p-4">
+    <div className="container-fluid p-4">
       <h1>Bundle Bobble</h1>
       <h2>Select webpack stats JSON file</h2>
       <form
@@ -103,11 +104,121 @@ function Home({ stats }) {
 function Bobble({ stats, "*": groupName }) {
   const group = stats.namedChunkGroups[groupName];
   if (!group) return "Not found!";
+  const chunkIds = new Set(group.chunks);
+  const chunks = stats.chunks.filter(c => chunkIds.has(c.id));
+  const moduleIds = new Set(
+    [].concat(...chunks.map(c => c.modules.map(m => m.id)))
+  );
+  const modulesMap = new Map(stats.modules.map(m => [m.id, m]));
+  const totalSize = Array.from(moduleIds).reduce(
+    (a, id) => a + modulesMap.get(id).size,
+    0
+  );
+  const graph = (window.graph = generateGraph(moduleIds, {
+    getParents(id) {
+      return modulesMap.get(id).reasons.map(r => r.moduleId);
+    },
+    getNodeName(id) {
+      return modulesMap.get(id).name;
+    }
+  }));
   return (
     <div>
-      <h3>Bobble chunk {groupName}</h3>
+      <h3>Bobble chunk group {groupName}</h3>
+      <ul>
+        <li>
+          IDs of chunks contained in this group: {[...chunkIds].join(", ")}
+        </li>
+        <li>Number of modules: {moduleIds.size}</li>
+        <li>Total size: {totalSize}</li>
+      </ul>
+      <GraphViewer graph={graph} />
     </div>
   );
+}
+
+function GraphViewer({ graph }) {
+  useEffect(() => setGraph(graph), [graph]);
+  return (
+    <div>
+      <Nodes graph={graph} nodeIds={graph.roots} />
+    </div>
+  );
+}
+
+const Nodes = React.memo(function Nodes({ graph, nodeIds, parentId }) {
+  return (
+    <ul>
+      {Array.from(nodeIds).map(id => {
+        return (
+          <li key={id}>
+            <Node graph={graph} nodeId={id} parentId={parentId} />
+          </li>
+        );
+      })}
+    </ul>
+  );
+});
+
+const Node = React.memo(function Node({ graph, nodeId, parentId }) {
+  const [shown, setShown] = React.useState(false);
+  const node = graph.nodes.get(nodeId);
+  const edgeId = parentId ? `${parentId}=>${nodeId}` : null;
+  return (
+    <React.Fragment>
+      {node.dependencies.size > 0 && (
+        <input
+          type="checkbox"
+          checked={shown}
+          onClick={() => setShown(!shown)}
+        />
+      )}
+      {edgeId ? (
+        <Observer>
+          {() => (
+            <label>
+              {node.name}
+              <input
+                type="checkbox"
+                checked={isCut(edgeId)}
+                onClick={() => toggleCut(edgeId)}
+              />
+            </label>
+          )}
+        </Observer>
+      ) : (
+        node.name
+      )}
+      {shown && (
+        <Nodes graph={graph} nodeIds={node.dependencies} parentId={nodeId} />
+      )}
+    </React.Fragment>
+  );
+});
+
+function generateGraph(moduleIds, { getNodeName, getParents }) {
+  const nodes = new Map();
+  const roots = new Set(moduleIds);
+  for (const id of moduleIds) {
+    nodes.set(id, {
+      id,
+      name: getNodeName(id),
+      dependencies: new Set(),
+      reasons: new Set()
+    });
+  }
+  for (const id of moduleIds) {
+    const node = nodes.get(id);
+    const parentIds = getParents(id);
+    for (const parentId of parentIds) {
+      const parent = nodes.get(parentId);
+      if (!parent) continue;
+      roots.delete(id);
+      node.reasons.add(parentId);
+      parent.dependencies.add(id);
+    }
+  }
+  return { roots, nodes };
 }
 
 const rootElement = document.getElementById("root");
