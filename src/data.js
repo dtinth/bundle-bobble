@@ -12,8 +12,8 @@ export async function loadData() {
     );
   log("Found file " + found.name);
   try {
-    data.set((window.bundleData = JSON.parse(await found.file.text())));
-    log("Data has been read!");
+    data.set((window.bundleStats = JSON.parse(await found.file.text())));
+    log("Data has been read! (Available as `window.bundleStats`)");
   } catch (e) {
     log("Error loading: " + e);
   }

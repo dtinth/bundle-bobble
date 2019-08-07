@@ -5,6 +5,7 @@
   "keywords": [],
   "main": "src/index.js",
   "dependencies": {
+    "@reach/router": "1.2.1",
     "dexie": "2.0.4",
     "mobx": "5.13.0",
     "mobx-react-lite": "1.4.1",

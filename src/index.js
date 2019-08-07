@@ -6,6 +6,7 @@ import { db } from "./db";
 import { log, logElementRef } from "./logging";
 import { data, loadData } from "./data";
 import { ErrorBoundary } from "react-error-boundary";
+import { Link, Router } from "@reach/router";
 
 function App() {
   const form = React.useRef();
@@ -60,19 +61,53 @@ function App() {
   );
 }
 
-const MyFallbackComponent = ({ componentStack, error }) => (
+const MyFallbackComponent = ({ error }) => (
   <div className="alert alert-danger" role="alert">
     <p>
       <strong>Oops! An error occured!</strong>
     </p>
-    <p class="mb-0">
+    <p className="mb-0">
       <strong>Error:</strong> {String(error)}
     </p>
   </div>
 );
 
-function Analyzer() {
-  // TODO
+function Analyzer({ stats }) {
+  return (
+    <Router>
+      <Bobble path="/chunkgroup/*" stats={stats} />
+      <Home path="/" stats={stats} />
+    </Router>
+  );
+}
+
+function Home({ stats }) {
+  return (
+    <div>
+      <h3>Which chunk to bobble?</h3>
+      <div className="list-group">
+        {Object.keys(stats.namedChunkGroups).map(key => (
+          <Link
+            key={key}
+            className="list-group-item list-group-item-action"
+            to={`/chunkgroup/${key}`}
+          >
+            {key}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Bobble({ stats, "*": groupName }) {
+  const group = stats.namedChunkGroups[groupName];
+  if (!group) return "Not found!";
+  return (
+    <div>
+      <h3>Bobble chunk {groupName}</h3>
+    </div>
+  );
 }
 
 const rootElement = document.getElementById("root");
