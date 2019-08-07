@@ -31,17 +31,22 @@ function App() {
               name: file.name,
               time: Date.now()
             });
-            log("Done");
+            log("Saved file to IndexedDB. Loading it...");
+            loadData();
           } catch (e) {
             log("Error: " + e);
           }
         }}
       >
-        <input type="file" name="file" />
-        <input type="submit" />
+        <p>
+          <input type="file" name="file" />
+        </p>
+        <p>
+          <input type="submit" />
+        </p>
       </form>
       <h2>Analyzer</h2>
-      {statsJson ? "OK" : "No stats loaded"}
+      {statsJson ? "OK" : <p>No stats loaded</p>}
       <h2>Logs</h2>
       <pre ref={logElementRef} />
     </div>
