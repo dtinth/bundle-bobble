@@ -5,6 +5,7 @@ import "./styles.css";
 import { db } from "./db";
 import { log, logElementRef } from "./logging";
 import { data, loadData } from "./data";
+import { ErrorBoundary } from "react-error-boundary";
 
 function App() {
   const form = React.useRef();
@@ -46,11 +47,32 @@ function App() {
         </p>
       </form>
       <h2>Analyzer</h2>
-      {statsJson ? "OK" : <p>No stats loaded</p>}
+      {statsJson ? (
+        <ErrorBoundary FallbackComponent={MyFallbackComponent}>
+          <Analyzer stats={statsJson} />
+        </ErrorBoundary>
+      ) : (
+        <p>No stats loaded</p>
+      )}
       <h2>Logs</h2>
       <pre ref={logElementRef} />
     </div>
   );
+}
+
+const MyFallbackComponent = ({ componentStack, error }) => (
+  <div className="alert alert-danger" role="alert">
+    <p>
+      <strong>Oops! An error occured!</strong>
+    </p>
+    <p class="mb-0">
+      <strong>Error:</strong> {String(error)}
+    </p>
+  </div>
+);
+
+function Analyzer() {
+  // TODO
 }
 
 const rootElement = document.getElementById("root");
