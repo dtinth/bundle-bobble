@@ -170,13 +170,13 @@ function GraphViewer({ graph }) {
   return (
     <div
       className="card"
-      style={{ display: "block" }}
+      style={{ display: "block", minHeight: "100vh" }}
       onKeyDown={onKeyDown}
       tabIndex={0}
     >
       <div
         className="card-header text-right"
-        style={{ position: "sticky", top: 0, zIndex: 3 }}
+        style={{ position: "sticky", top: 0, background: "#eee", zIndex: 1 }}
       >
         <Observer>
           {() => (
@@ -251,23 +251,22 @@ const Node = React.memo(function Node({ graph, nodeId, parentId, path }) {
   const onFocus = () => (uiState.focus = { nodeId, parentId });
   return (
     <React.Fragment>
-      {node.dependencies.size > 0 ? (
-        <label>
-          <input
-            type="checkbox"
-            checked={shown}
-            onClick={() => setShown(!shown)}
-            onFocus={onFocus}
-          />
-          {name}
-        </label>
-      ) : (
-        <div tabIndex={0} onFocus={onFocus}>
-          <input type="checkbox" disabled />
-          {name}
-        </div>
-      )}
-      {shown && (
+      <div
+        className="node-item"
+        tabIndex={0}
+        onFocus={onFocus}
+        onClick={() => setShown(!shown)}
+        onKeyDown={e => {
+          if (e.keyCode === 32) {
+            setShown(!shown);
+            e.preventDefault();
+          }
+        }}
+      >
+        {node.dependencies.size > 0 && (shown ? "[-] " : "[+] ")}
+        {name}
+      </div>
+      {node.dependencies.size > 0 && shown && (
         <Nodes
           graph={graph}
           nodeIds={node.dependencies}
