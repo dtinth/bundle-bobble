@@ -23,6 +23,9 @@ function recalculate() {
   if (!graph) return;
   const visited = new Map();
   function visit(nodeId) {
+    if (isCut(nodeId)) {
+      return;
+    }
     if (visited.has(nodeId)) return;
     visited.set(nodeId, 0);
     const node = graph.nodes.get(nodeId);

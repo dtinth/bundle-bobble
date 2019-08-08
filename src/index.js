@@ -11,7 +11,6 @@ import {
   isCut,
   toggleCut,
   setGraph,
-  isReachable,
   getReachableModuleCount,
   getReachableSize,
   getReachableCount
@@ -153,10 +152,28 @@ function Bobble({ stats, "*": rest }) {
   );
 }
 
+const onKeyDown = e => {
+  if (e.key === "x") {
+    if (uiState.focus && uiState.focus.parentId) {
+      toggleCut(`${uiState.focus.parentId}=>${uiState.focus.nodeId}`);
+    }
+  }
+  if (e.key === "c") {
+    if (uiState.focus) {
+      toggleCut(`${uiState.focus.nodeId}`);
+    }
+  }
+};
+
 function GraphViewer({ graph }) {
   useEffect(() => setGraph(graph), [graph]);
   return (
-    <div className="card" style={{ display: "block" }}>
+    <div
+      className="card"
+      style={{ display: "block" }}
+      onKeyDown={onKeyDown}
+      tabIndex={0}
+    >
       <div
         className="card-header text-right"
         style={{ position: "sticky", top: 0, zIndex: 3 }}
@@ -208,14 +225,24 @@ const Node = React.memo(function Node({ graph, nodeId, parentId, path }) {
   const shown = useObserver(() => uiState.expanded.get(path));
   const setShown = v => uiState.expanded.set(path, v);
   const node = graph.nodes.get(nodeId);
-  // const edgeId = parentId ? `${parentId}=>${nodeId}` : null;
+  const edgeId = parentId ? `${parentId}=>${nodeId}` : null;
   const name = (
     <Observer>
       {() => {
         const count = getReachableCount(nodeId);
+        const cut = (parentId && isCut(edgeId)) || isCut(nodeId);
         return (
-          <span className={`name ${count > 0 ? "-reachable" : "-pruned"}`}>
-            {node.name} [{count}]
+          <span>
+            <span
+              className={[
+                "name",
+                count > 0 ? "-reachable" : "-pruned",
+                cut ? "-cut" : "-intact"
+              ].join(" ")}
+            >
+              {node.name}
+            </span>{" "}
+            [{count}]
           </span>
         );
       }}
@@ -289,11 +316,28 @@ function FocusView({ graph }) {
   }
   return (
     <div>
-      <h3>{focusModule.name}</h3>
+      <h3>
+        {focusParent ? (
+          <small className="text-muted">
+            {focusParent.name} &rarr;
+            <br />
+          </small>
+        ) : null}
+        {focusModule.name}
+      </h3>
+      <h4>Actions</h4>
+      <ul>
+        <li>
+          <kbd>x</kbd> — Delete dependency
+        </li>
+        <li>
+          <kbd>c</kbd> — Cut module out of the tree
+        </li>
+      </ul>
       <h4>Reasons</h4>
       <ul>
-        {focusModule.stats.reasons.map((r, i) => (
-          <li key={i}>{r.moduleName}</li>
+        {Array.from(focusModule.reasons).map((r, i) => (
+          <li key={i}>{graph.nodes.get(r).name}</li>
         ))}
       </ul>
     </div>

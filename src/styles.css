@@ -1,3 +1,6 @@
 .name.-pruned {
   color: #999;
 }
+.name.-cut {
+  text-decoration: line-through;
+}
