@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import ReactDOM from "react-dom";
 import { useObserver, Observer } from "mobx-react-lite";
 import "./styles.css";
@@ -21,6 +21,7 @@ import {
 import uiState from "./ui-state";
 import formatSize from "bytes";
 import { observable } from "mobx";
+import { useComputationallyIntensiveValue } from "./queuedRenders";
 
 function App() {
   const form = React.useRef();
@@ -310,53 +311,6 @@ const Node = React.memo(function Node({ graph, nodeId, parentId, path }) {
   );
 });
 
-let queueContents = new Map();
-let latestWorker = null;
-function workOnQueue() {
-  const worker = {
-    stop() {
-      latestWorker = null;
-    }
-  };
-  latestWorker = worker;
-  void (async () => {
-    while (latestWorker === worker) {
-      if (queueContents.size === 0) latestWorker = null;
-      for (const [key, value] of queueContents) {
-        queueContents.delete(key);
-        try {
-          await value.update();
-        } catch (e) {
-          setTimeout(() => {
-            throw e;
-          });
-        }
-        break;
-      }
-      await new Promise(r => setTimeout(r, 1));
-    }
-  })();
-}
-function useQueuedComputation(f) {
-  let ref = useRef();
-  let [value, setValue] = useState(null);
-  useEffect(() => {
-    queueContents.set(ref, {
-      async update() {
-        const v = await f();
-        setValue(() => v);
-      }
-    });
-    if (!latestWorker) {
-      workOnQueue();
-    }
-    return () => {
-      queueContents.delete(ref);
-    };
-  }, [f]);
-  return value;
-}
-
 function Impact({ graph, nodeId }) {
   const recomputedCount = useObserver(() => getRecomputedCount());
   const totalReachableSize = useObserver(() => getReachableSize());
@@ -369,7 +323,7 @@ function Impact({ graph, nodeId }) {
     const projectedSize = calculateReachableSize(projectedReachabilityMap);
     return totalReachableSize - projectedSize;
   }, [graph, nodeId, recomputedCount, totalReachableSize]);
-  const savedSize = useQueuedComputation(f);
+  const savedSize = useComputationallyIntensiveValue(f);
   if (!savedSize) {
     return null;
   }
