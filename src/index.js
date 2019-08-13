@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom";
-import { useObserver, Observer, useComputed } from "mobx-react-lite";
+import { useObserver, Observer } from "mobx-react-lite";
 import "./styles.css";
 import { db } from "./db";
 import { log, logElementRef } from "./logging";
@@ -16,6 +16,7 @@ import {
   getReachableCount
 } from "./reachability";
 import uiState from "./ui-state";
+import formatSize from "bytes";
 
 function App() {
   const form = React.useRef();
@@ -145,7 +146,7 @@ function Bobble({ stats, "*": rest }) {
           IDs of chunks contained in this group: {[...chunkIds].join(", ")}
         </li>
         <li>Number of modules: {moduleIds.size}</li>
-        <li>Total size: {totalSize}</li>
+        <li>Total size: {formatSize(totalSize)}</li>
       </ul>
       <GraphViewer graph={graph} />
     </div>
@@ -181,7 +182,8 @@ function GraphViewer({ graph }) {
         <Observer>
           {() => (
             <span>
-              {getReachableModuleCount()} reachable, size={getReachableSize()}
+              {getReachableModuleCount()} reachable, size=
+              {formatSize(getReachableSize())}
             </span>
           )}
         </Observer>
