@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
 import { useObserver, Observer } from "mobx-react-lite";
 import "./styles.css";
@@ -13,7 +13,10 @@ import {
   setGraph,
   getReachableModuleCount,
   getReachableSize,
-  getReachableCount
+  getReachableCount,
+  getRecomputedCount,
+  calculateReachability,
+  calculateReachableSize
 } from "./reachability";
 import uiState from "./ui-state";
 import formatSize from "bytes";
@@ -245,6 +248,7 @@ const Node = React.memo(function Node({ graph, nodeId, parentId, path }) {
               {node.name}
             </span>{" "}
             [{count}]
+            <Impact graph={graph} nodeId={nodeId} />
           </span>
         );
       }}
@@ -279,6 +283,78 @@ const Node = React.memo(function Node({ graph, nodeId, parentId, path }) {
     </React.Fragment>
   );
 });
+
+let queueContents = new Map();
+let latestWorker = null;
+function workOnQueue() {
+  const worker = {
+    stop() {
+      latestWorker = null;
+    }
+  };
+  latestWorker = worker;
+  void (async () => {
+    while (latestWorker === worker) {
+      if (queueContents.size === 0) latestWorker = null;
+      for (const [key, value] of queueContents) {
+        queueContents.delete(key);
+        try {
+          await value.update();
+        } catch (e) {
+          setTimeout(() => {
+            throw e;
+          });
+        }
+        break;
+      }
+      await new Promise(r => setTimeout(r, 1));
+    }
+  })();
+}
+function useQueuedComputation(f) {
+  let ref = useRef();
+  let [value, setValue] = useState(null);
+  useEffect(() => {
+    queueContents.set(ref, {
+      async update() {
+        const v = await f();
+        setValue(() => v);
+      }
+    });
+    if (!latestWorker) {
+      workOnQueue();
+    }
+    return () => {
+      queueContents.delete(ref);
+    };
+  }, [f]);
+  return value;
+}
+
+function Impact({ graph, nodeId }) {
+  const recomputedCount = useObserver(() => getRecomputedCount());
+  const totalReachableSize = useObserver(() => getReachableSize());
+  const f = useCallback(() => {
+    void recomputedCount; // HACK
+    const projectedReachabilityMap = calculateReachability(
+      graph,
+      id => id === nodeId
+    );
+    const projectedSize = calculateReachableSize(projectedReachabilityMap);
+    return totalReachableSize - projectedSize;
+  }, [graph, nodeId, recomputedCount, totalReachableSize]);
+  const savedSize = useQueuedComputation(f);
+  if (!savedSize) {
+    return null;
+  }
+  const hue = Math.round(120 * Math.pow(1 - savedSize / totalReachableSize, 5));
+  return (
+    <span style={{ color: `hsl(${hue},80%,40%)` }}>
+      {" "}
+      +{formatSize(savedSize)}
+    </span>
+  );
+}
 
 function generateGraph(moduleIds, { getNodeInfo, getParents }) {
   const nodes = new Map();
