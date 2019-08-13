@@ -20,6 +20,7 @@ import {
 } from "./reachability";
 import uiState from "./ui-state";
 import formatSize from "bytes";
+import { observable } from "mobx";
 
 function App() {
   const form = React.useRef();
@@ -89,27 +90,52 @@ const MyFallbackComponent = ({ error }) => (
 function Analyzer({ stats }) {
   return (
     <Router>
-      <Bobble path="/chunkgroup/*" stats={stats} />
+      <Bobble path="/chunkgroups/*" stats={stats} />
       <Home path="/" stats={stats} />
     </Router>
   );
 }
 
 function Home({ stats }) {
+  const [choices] = useState(() => observable.set());
   return (
     <div>
-      <h3>Which chunk to bobble?</h3>
-      <div className="list-group">
-        {Object.keys(stats.namedChunkGroups).map(key => (
+      <h3>Which chunks to bobble?</h3>
+      {Object.keys(stats.namedChunkGroups).map(key => {
+        const id = `check${key}`;
+        return (
+          <div key={key} className="form-check">
+            <Observer>
+              {() => (
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  checked={choices.has(key)}
+                  onChange={e => {
+                    if (e.target.checked) choices.add(key);
+                    else choices.delete(key);
+                  }}
+                  id={id}
+                />
+              )}
+            </Observer>
+            <label for={id} className="form-check-label">
+              {key}
+            </label>
+          </div>
+        );
+      })}
+      <Observer>
+        {() => (
           <Link
-            key={key}
-            className="list-group-item list-group-item-action"
-            to={`/chunkgroup/${key}`}
+            className="btn btn-primary"
+            to={`/chunkgroups/${Array.from(choices).join(",")}`}
+            role="button"
           >
-            {key}
+            Start Bobblin’!
           </Link>
-        ))}
-      </div>
+        )}
+      </Observer>
     </div>
   );
 }
