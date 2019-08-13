@@ -430,9 +430,11 @@ function FocusView({ graph }) {
       </h3>
       <h4>Actions</h4>
       <ul>
-        <li>
-          <kbd>x</kbd> — Delete dependency
-        </li>
+        {!!focusParent && (
+          <li>
+            <kbd>x</kbd> — Delete dependency
+          </li>
+        )}
         <li>
           <kbd>c</kbd> — Cut module out of the tree
         </li>
