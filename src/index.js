@@ -327,22 +327,28 @@ const Node = React.memo(function Node({ graph, nodeId, parentId, path }) {
 function Impact({ graph, nodeId }) {
   const recomputedCount = useObserver(() => getRecomputedCount());
   const totalReachableSize = useObserver(() => getReachableSize());
-  const f = useCallback(() => {
-    void recomputedCount; // HACK
-    const projectedReachabilityMap = calculateReachability(
-      graph,
-      id => id === nodeId
-    );
-    const projectedSize = calculateReachableSize(projectedReachabilityMap);
-    return totalReachableSize - projectedSize;
-  }, [graph, nodeId, recomputedCount, totalReachableSize]);
-  const savedSize = useComputationallyIntensiveValue(f);
-  if (!savedSize) {
+  const f = useCallback(
+    function calculate() {
+      void recomputedCount; // HACK
+      const projectedReachabilityMap = calculateReachability(
+        graph,
+        id => id === nodeId
+      );
+      const projectedSize = calculateReachableSize(projectedReachabilityMap);
+      return { savedSize: totalReachableSize - projectedSize };
+    },
+    [graph, nodeId, recomputedCount, totalReachableSize]
+  );
+  const { value: result, source } = useComputationallyIntensiveValue(f);
+  if (!result) {
     return null;
   }
+  const { savedSize } = result;
   const hue = Math.round(120 * Math.pow(1 - savedSize / totalReachableSize, 5));
   return (
-    <span style={{ color: `hsl(${hue},80%,40%)` }}>
+    <span
+      style={{ color: `hsl(${hue},80%,40%)`, opacity: source === f ? 1 : 0.5 }}
+    >
       {" "}
       +{formatSize(savedSize)}
     </span>

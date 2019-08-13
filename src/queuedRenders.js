@@ -35,12 +35,12 @@ function workOnQueue() {
 
 export function useComputationallyIntensiveValue(f) {
   let ref = useRef();
-  let [value, setValue] = useState(null);
+  let [state, setState] = useState({ value: null, source: null });
   useEffect(() => {
     queueContents.set(ref, {
       async update() {
         const v = await f();
-        setValue(() => v);
+        setState({ value: v, source: f });
       }
     });
     if (!latestWorker) {
@@ -50,5 +50,5 @@ export function useComputationallyIntensiveValue(f) {
       queueContents.delete(ref);
     };
   }, [f]);
-  return value;
+  return state;
 }
