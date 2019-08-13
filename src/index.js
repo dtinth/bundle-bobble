@@ -32,47 +32,60 @@ function App() {
     else log("Data has already been loaded");
   }, []);
   return (
-    <div className="container-fluid p-4">
-      <h1>Bundle Bobble</h1>
-      <h2>Select webpack stats JSON file</h2>
-      <form
-        ref={form}
-        onSubmit={async e => {
-          e.preventDefault();
-          const file = form.current.file.files[0];
-          log(`Saving file ${file.name} to IndexedDB`);
-          try {
-            await db.kv.put({
-              key: "stats",
-              file: file,
-              name: file.name,
-              time: Date.now()
-            });
-            log("Saved file to IndexedDB. Loading it...");
-            loadData();
-          } catch (e) {
-            log("Error: " + e);
-          }
-        }}
-      >
-        <p>
-          <input type="file" name="file" />
-        </p>
-        <p>
-          <input type="submit" />
-        </p>
-      </form>
-      <h2>Analyzer</h2>
-      {statsJson ? (
-        <ErrorBoundary FallbackComponent={MyFallbackComponent}>
-          <p>Built at: {new Date(statsJson.builtAt).toString()}</p>
-          <Analyzer stats={statsJson} />
-        </ErrorBoundary>
-      ) : (
-        <p>No stats loaded</p>
-      )}
-      <h2>Logs</h2>
-      <pre ref={logElementRef} />
+    <div>
+      <div className="jumbotron">
+        <div className="container-fluid">
+          <h1 className="display-3">Bundle Bobble</h1>
+          <p>
+            This is a little utility that will help you find an effective
+            code-splitting point. Useful for large projects.
+          </p>
+        </div>
+      </div>
+      <div className="container-fluid p-5">
+        <h2>Select webpack stats JSON file</h2>
+        <form
+          className="mb-5"
+          ref={form}
+          onSubmit={async e => {
+            e.preventDefault();
+            const file = form.current.file.files[0];
+            log(`Saving file ${file.name} to IndexedDB`);
+            try {
+              await db.kv.put({
+                key: "stats",
+                file: file,
+                name: file.name,
+                time: Date.now()
+              });
+              log("Saved file to IndexedDB. Loading it...");
+              loadData();
+            } catch (e) {
+              log("Error: " + e);
+            }
+          }}
+        >
+          <p>
+            <input type="file" name="file" />
+          </p>
+          <p>
+            <input type="submit" />
+          </p>
+        </form>
+        <h2>Analyzer</h2>
+        <div className="mb-5">
+          {statsJson ? (
+            <ErrorBoundary FallbackComponent={MyFallbackComponent}>
+              <p>Built at: {new Date(statsJson.builtAt).toString()}</p>
+              <Analyzer stats={statsJson} />
+            </ErrorBoundary>
+          ) : (
+            <p>No stats loaded</p>
+          )}
+        </div>
+        <h2>Logs</h2>
+        <pre ref={logElementRef} />
+      </div>
     </div>
   );
 }
